@@ -1311,7 +1311,30 @@ function formatJSON(rawJson, type, inputValue) {
     return "Data not found for " + inputValue + "\n\nServer Raw Response:\n" + cleanResponse;
   }
 
-  if (!data.data || !Array.isArray(data.data) || data.data.length === 0) {
+  let records = [];
+  let challans = [];
+
+  switch (type) {
+    case 'mobile':
+    case 'aadhaar':
+      records = data.data || [];
+      break;
+    case 'gst':
+      records = data.data ? [data.data] : [];
+      break;
+    case 'tg':
+      records = data.data ? [data.data] : [];
+      break;
+    case 'vehicle':
+      records = (data.result && data.result.vehicle_response) ? [data.result.vehicle_response] : [];
+      challans = (data.result && data.result.challan_response && data.result.challan_response.data) ? data.result.challan_response.data : [];
+      break;
+    case 'ifsc':
+      records = [data];
+      break;
+  }
+
+  if (records.length === 0) {
     const cleanResponse = cleanServerResponse(rawJson);
     return "No data available for " + inputValue + "\n\nServer Raw Response:\n" + cleanResponse;
   }
@@ -1330,7 +1353,7 @@ function formatJSON(rawJson, type, inputValue) {
     formatted += "GST NUMBER ANALYSIS REPORT\n";
     formatted += "                 FOR " + inputValue + "\n";
   } else if (type === "tg") {
-    formatted += "TELEGRAM USER ID ANALYSIS REPORT\n";
+    formatted += "TELEGRAM USER ANALYSIS REPORT\n";
     formatted += "                 FOR " + inputValue + "\n";
   } else if (type === "vehicle") {
     formatted += "VEHICLE RC ANALYSIS REPORT\n";
@@ -1342,7 +1365,7 @@ function formatJSON(rawJson, type, inputValue) {
   formatted += "========================================================\n\n";
   
   // Format each record
-  data.data.forEach((item, idx) => {
+  records.forEach((item, idx) => {
     formatted += "-------------------------------------------\n";
     if (idx === 0) {
       formatted += `                      RECORD ${idx+1} FOR ${inputValue}\n`; // First record shows the input value
@@ -1352,26 +1375,126 @@ function formatJSON(rawJson, type, inputValue) {
     formatted += "-------------------------------------------\n";
     
     // Handle all possible fields, ensuring email is lowercase and others are uppercase
-    if (item.name) formatted += "Name: " + item.name.toUpperCase() + "\n";
-    if (item.fname) formatted += "Father's Name: " + item.fname.toUpperCase() + "\n";
-    if (item.address) formatted += "Address: " + item.address.replace(/!/g, ', ').toUpperCase() + "\n";
-    if (item.mobile) formatted += "Phone Number: " + item.mobile + "\n";
-    if (item.alt) formatted += "Alternative Number: " + item.alt + "\n";
-    if (item.circle) formatted += "Circle: " + item.circle.toUpperCase() + "\n";
-    if (item.email) formatted += "Email: " + item.email.toLowerCase() + "\n";
-    if (item.id) formatted += "Aadhaar: " + item.id + "\n";
+    // Skip if value is null or empty string
+    if (item.name != null && item.name !== '') formatted += "Name: " + item.name.toUpperCase() + "\n";
+    if (item.fname != null && item.fname !== '') formatted += "Father's Name: " + item.fname.toUpperCase() + "\n";
+    if (item.address != null && item.address !== '') formatted += "Address: " + item.address.replace(/!/g, ', ').replace(/\n/g, ', ').toUpperCase() + "\n";
+    if (item.mobile != null && item.mobile !== '') formatted += "Phone Number: " + item.mobile + "\n";
+    if (item.alt != null && item.alt !== '') formatted += "Alternative Number: " + item.alt + "\n";
+    if (item.circle != null && item.circle !== '') formatted += "Circle: " + item.circle.toUpperCase() + "\n";
+    if (item.email != null && item.email !== '') formatted += "Email: " + item.email.toLowerCase() + "\n";
+    if (item.id != null && item.id !== '') formatted += "Aadhaar: " + item.id + "\n";
     
-    // Add fields specific to GST, Telegram, Vehicle RC, or IFSC if present
-    if (item.gst_number) formatted += "GST Number: " + item.gst_number.toUpperCase() + "\n";
-    if (item.business_name) formatted += "Business Name: " + item.business_name.toUpperCase() + "\n";
-    if (item.telegram_id) formatted += "Telegram ID: " + item.telegram_id + "\n";
-    if (item.vehicle_number) formatted += "Vehicle Number: " + item.vehicle_number.toUpperCase() + "\n";
-    if (item.ifsc_code) formatted += "IFSC Code: " + item.ifsc_code.toUpperCase() + "\n";
-    if (item.bank_name) formatted += "Bank Name: " + item.bank_name.toUpperCase() + "\n";
-    if (item.branch) formatted += "Branch: " + item.branch.toUpperCase() + "\n";
+    // GST fields
+    if (item.Gstin != null && item.Gstin !== '') formatted += "GSTIN: " + item.Gstin + "\n";
+    if (item.TradeName != null && item.TradeName !== '') formatted += "Trade Name: " + item.TradeName.toUpperCase() + "\n";
+    if (item.LegalName != null && item.LegalName !== '') formatted += "Legal Name: " + item.LegalName.toUpperCase() + "\n";
+    if (item.AddrBnm || item.AddrBno || item.AddrFlno || item.AddrSt || item.AddrLoc) {
+      const addrParts = [item.AddrBno, item.AddrFlno, item.AddrSt, item.AddrBnm, item.AddrLoc].filter(part => part != null && part !== '').join(', ');
+      if (addrParts) formatted += "Address: " + addrParts.toUpperCase() + "\n";
+    }
+    if (item.StateCode != null && item.StateCode !== '') formatted += "State Code: " + item.StateCode + "\n";
+    if (item.AddrPncd != null && item.AddrPncd !== '') formatted += "Pincode: " + item.AddrPncd + "\n";
+    if (item.TxpType != null && item.TxpType !== '') formatted += "Taxpayer Type: " + item.TxpType + "\n";
+    if (item.Status != null && item.Status !== '') formatted += "Status: " + item.Status.toUpperCase() + "\n";
+    if (item.BlkStatus != null && item.BlkStatus !== '') formatted += "Block Status: " + item.BlkStatus.toUpperCase() + "\n";
+    if (item.DtReg != null && item.DtReg !== '') formatted += "Registration Date: " + item.DtReg + "\n";
+    if (item.DtDReg != null && item.DtDReg !== '') formatted += "Deregistration Date: " + item.DtDReg + "\n";
+    
+    // TG fields
+    if (item.first_name != null && item.first_name !== '') formatted += "First Name: " + item.first_name.toUpperCase() + "\n";
+    if (item.last_name != null && item.last_name !== '') formatted += "Last Name: " + item.last_name.toUpperCase() + "\n";
+    if (item.id != null && item.id !== '') formatted += "ID: " + item.id + "\n";
+    if (item.is_active != null) formatted += "Is Active: " + (item.is_active ? "Yes" : "No") + "\n";
+    if (item.is_bot != null) formatted += "Is Bot: " + (item.is_bot ? "Yes" : "No") + "\n";
+    if (item.first_msg_date != null && item.first_msg_date !== '') formatted += "First Message Date: " + item.first_msg_date + "\n";
+    if (item.last_msg_date != null && item.last_msg_date !== '') formatted += "Last Message Date: " + item.last_msg_date + "\n";
+    if (item.adm_in_groups != null && item.adm_in_groups !== '') formatted += "Admin in Groups: " + item.adm_in_groups + "\n";
+    if (item.msg_in_groups_count != null && item.msg_in_groups_count !== '') formatted += "Messages in Groups: " + item.msg_in_groups_count + "\n";
+    if (item.names_count != null && item.names_count !== '') formatted += "Names Count: " + item.names_count + "\n";
+    if (item.total_groups != null && item.total_groups !== '') formatted += "Total Groups: " + item.total_groups + "\n";
+    if (item.total_msg_count != null && item.total_msg_count !== '') formatted += "Total Messages: " + item.total_msg_count + "\n";
+    if (item.usernames_count != null && item.usernames_count !== '') formatted += "Usernames Count: " + item.usernames_count + "\n";
+    
+    // IFSC fields
+    if (item.IFSC != null && item.IFSC !== '') formatted += "IFSC: " + item.IFSC + "\n";
+    if (item.BANK != null && item.BANK !== '') formatted += "Bank: " + item.BANK.toUpperCase() + "\n";
+    if (item.BANKCODE != null && item.BANKCODE !== '') formatted += "Bank Code: " + item.BANKCODE + "\n";
+    if (item.BRANCH != null && item.BRANCH !== '') formatted += "Branch: " + item.BRANCH.toUpperCase() + "\n";
+    if (item.ADDRESS != null && item.ADDRESS !== '') formatted += "Address: " + item.ADDRESS.replace(/\n/g, ', ').toUpperCase() + "\n";
+    if (item.CITY != null && item.CITY !== '') formatted += "City: " + item.CITY.toUpperCase() + "\n";
+    if (item.DISTRICT != null && item.DISTRICT !== '') formatted += "District: " + item.DISTRICT.toUpperCase() + "\n";
+    if (item.STATE != null && item.STATE !== '') formatted += "State: " + item.STATE.toUpperCase() + "\n";
+    if (item.CENTRE != null && item.CENTRE !== '') formatted += "Centre: " + item.CENTRE.toUpperCase() + "\n";
+    if (item.MICR != null && item.MICR !== '') formatted += "MICR: " + item.MICR + "\n";
+    if (item.CONTACT != null && item.CONTACT !== '') formatted += "Contact: " + item.CONTACT + "\n";
+    if (item.UPI != null) formatted += "UPI: " + (item.UPI ? "Yes" : "No") + "\n";
+    if (item.RTGS != null) formatted += "RTGS: " + (item.RTGS ? "Yes" : "No") + "\n";
+    if (item.NEFT != null) formatted += "NEFT: " + (item.NEFT ? "Yes" : "No") + "\n";
+    if (item.IMPS != null) formatted += "IMPS: " + (item.IMPS ? "Yes" : "No") + "\n";
+    if (item.SWIFT != null && item.SWIFT !== '') formatted += "SWIFT: " + item.SWIFT + "\n";
+    if (item.ISO3166 != null && item.ISO3166 !== '') formatted += "ISO3166: " + item.ISO3166 + "\n";
+    
+    // Vehicle fields
+    if (item.asset_number != null && item.asset_number !== '') formatted += "Asset Number: " + item.asset_number.toUpperCase() + "\n";
+    if (item.asset_type != null && item.asset_type !== '') formatted += "Asset Type: " + item.asset_type.toUpperCase() + "\n";
+    if (item.registration_year != null && item.registration_year !== '') formatted += "Registration Year: " + item.registration_year + "\n";
+    if (item.registration_month != null && item.registration_month !== '') formatted += "Registration Month: " + item.registration_month + "\n";
+    if (item.make_model != null && item.make_model !== '') formatted += "Make Model: " + item.make_model.toUpperCase() + "\n";
+    if (item.vehicle_type != null && item.vehicle_type !== '') formatted += "Vehicle Type: " + item.vehicle_type.toUpperCase() + "\n";
+    if (item.make_name != null && item.make_name !== '') formatted += "Make Name: " + item.make_name.toUpperCase() + "\n";
+    if (item.fuel_type != null && item.fuel_type !== '') formatted += "Fuel Type: " + item.fuel_type.toUpperCase() + "\n";
+    if (item.engine_number != null && item.engine_number !== '') formatted += "Engine Number: " + item.engine_number + "\n";
+    if (item.owner_name != null && item.owner_name !== '') formatted += "Owner Name: " + item.owner_name.toUpperCase() + "\n";
+    if (item.chassis_number != null && item.chassis_number !== '') formatted += "Chassis Number: " + item.chassis_number + "\n";
+    if (item.previous_insurer != null && item.previous_insurer !== '') formatted += "Previous Insurer: " + item.previous_insurer.toUpperCase() + "\n";
+    if (item.previous_policy_expiry_date != null && item.previous_policy_expiry_date !== '') formatted += "Previous Policy Expiry Date: " + item.previous_policy_expiry_date + "\n";
+    if (item.is_commercial != null) formatted += "Is Commercial: " + (item.is_commercial ? "Yes" : "No") + "\n";
+    if (item.vehicle_type_v2 != null && item.vehicle_type_v2 !== '') formatted += "Vehicle Type V2: " + item.vehicle_type_v2.toUpperCase() + "\n";
+    if (item.vehicle_type_processed != null && item.vehicle_type_processed !== '') formatted += "Vehicle Type Processed: " + item.vehicle_type_processed.toUpperCase() + "\n";
+    if (item.permanent_address != null && item.permanent_address !== '') formatted += "Permanent Address: " + item.permanent_address.replace(/\n/g, ', ').toUpperCase() + "\n";
+    if (item.present_address != null && item.present_address !== '') formatted += "Present Address: " + item.present_address.replace(/\n/g, ', ').toUpperCase() + "\n";
+    if (item.registration_date != null && item.registration_date !== '') formatted += "Registration Date: " + item.registration_date + "\n";
+    if (item.registration_address != null && item.registration_address !== '') formatted += "Registration Address: " + item.registration_address.replace(/\n/g, ', ').toUpperCase() + "\n";
+    if (item.model_name != null && item.model_name !== '') formatted += "Model Name: " + item.model_name.toUpperCase() + "\n";
+    if (item.make_name2 != null && item.make_name2 !== '') formatted += "Make Name 2: " + item.make_name2.toUpperCase() + "\n";
+    if (item.model_name2 != null && item.model_name2 !== '') formatted += "Model Name 2: " + item.model_name2.toUpperCase() + "\n";
+    if (item.variant_id != null && item.variant_id !== '') formatted += "Variant ID: " + item.variant_id + "\n";
+    if (item.variant_id_0 != null && item.variant_id_0 !== '') formatted += "Variant ID 0: " + item.variant_id_0 + "\n";
+    if (item.previous_policy_expired != null) formatted += "Previous Policy Expired: " + (item.previous_policy_expired ? "Yes" : "No") + "\n";
     
     formatted += "\n";
   });
+  
+  // Handle challans for vehicle
+  if (type === "vehicle" && challans.length > 0) {
+    formatted += "========================================================\n";
+    formatted += "CHALLAN DETAILS\n";
+    formatted += "========================================================\n\n";
+    
+    challans.forEach((challan, idx) => {
+      formatted += "-------------------------------------------\n";
+      formatted += `                      CHALLAN ${idx+1}\n`;
+      formatted += "-------------------------------------------\n";
+      
+      if (challan.number != null && challan.number !== '') formatted += "Challan Number: " + challan.number + "\n";
+      if (challan.amount && challan.amount.total != null) formatted += "Total Amount: " + challan.amount.total + "\n";
+      if (challan.state != null && challan.state !== '') formatted += "State: " + challan.state + "\n";
+      if (challan.challan_status != null && challan.challan_status !== '') formatted += "Status: " + challan.challan_status.toUpperCase() + "\n";
+      if (challan.date != null && challan.date !== '') formatted += "Date: " + challan.date + "\n";
+      if (challan.name != null && challan.name !== '') formatted += "Name: " + challan.name.toUpperCase() + "\n";
+      if (challan.location != null && challan.location !== '') formatted += "Location: " + challan.location.toUpperCase() + "\n";
+      if (challan.violations && challan.violations.details) {
+        formatted += "Violations:\n";
+        Object.entries(challan.violations.details).forEach(([key, value]) => {
+          if (key.startsWith('offence') && value != null && value !== '') {
+            formatted += " - " + value.replace(/\n/g, ' ').trim() + "\n";
+          }
+        });
+      }
+      formatted += "\n";
+    });
+  }
   
   // Add footer
   formatted += "------------------------------------------\n";
